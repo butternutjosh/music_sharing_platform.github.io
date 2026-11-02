@@ -1,8 +1,409 @@
-<html>
-  <head>
-    <title>music sharing</title>
-  </head>
-  <body>
-    <p>hello everyone</p>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Library</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        header {
+            padding: 25px 40px;
+            background: #181818;
+            border-bottom: 1px solid #333;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #1ed760;
+            font-size: 28px;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        input[type="search"] {
+            background: #282828;
+            color: white;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 6px;
+            width: 260px;
+        }
+
+        button {
+            background: #1ed760;
+            color: black;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1fef6a;
+        }
+
+        .track {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            margin-top: 10px;
+            background: #202020;
+            border-radius: 8px;
+        }
+
+        .track:hover {
+            background: #303030;
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-name {
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        .track-size {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .download {
+            color: #1ed760;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .download:hover {
+            text-decoration: underline;
+        }
+
+        #player-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #181818;
+            padding: 15px 25px;
+            border-top: 1px solid #333;
+        }
+
+        audio {
+            width: 100%;
+        }
+
+        #message {
+            color: #aaa;
+            margin: 20px 0;
+        }
+
+        #upload-section {
+            margin-top: 35px;
+            padding: 20px;
+            background: #202020;
+            border-radius: 10px;
+        }
+
+        #upload-section h2 {
+            margin-top: 0;
+        }
+
+        #file-input {
+            margin: 15px 0;
+            max-width: 100%;
+        }
+
+        #upload-status {
+            color: #1ed760;
+            margin-top: 12px;
+        }
+
+        .library-heading {
+            margin-top: 35px;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 20px;
+            }
+
+            .top-bar {
+                align-items: stretch;
+            }
+
+            input[type="search"] {
+                width: 100%;
+            }
+
+            .track {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>♪ Music Library</h1>
+</header>
+
+<main>
+
+    <div class="top-bar">
+        <h2>Your Music</h2>
+
+        <input
+            type="search"
+            id="search"
+            placeholder="Search tracks..."
+        >
+    </div>
+
+    <p id="message">Loading music library...</p>
+
+    <div id="track-list"></div>
+
+    <section id="upload-section">
+        <h2>Upload Music</h2>
+
+        <p>Select an MP3 file to add to the library.</p>
+
+        <input
+            type="file"
+            id="file-input"
+            accept=".mp3,audio/mpeg"
+        >
+
+        <br>
+
+        <button id="upload-button">Upload Track</button>
+
+        <p id="upload-status"></p>
+    </section>
+
+</main>
+
+<div id="player-container">
+    <audio id="audio-player" controls></audio>
+</div>
+
+<script>
+
+const API = "https://music-library-api.parketjosh3.workers.dev";
+
+const trackList = document.getElementById("track-list");
+const message = document.getElementById("message");
+const search = document.getElementById("search");
+const player = document.getElementById("audio-player");
+
+let tracks = [];
+
+// Load tracks from Cloudflare
+async function loadTracks() {
+
+    message.textContent = "Loading music...";
+
+    try {
+
+        const response = await fetch(`${API}/api/tracks`);
+
+        if (!response.ok) {
+            throw new Error("Could not load tracks");
+        }
+
+        const data = await response.json();
+
+        tracks = data.tracks;
+
+        displayTracks(tracks);
+
+        message.textContent = tracks.length
+            ? `${tracks.length} tracks in your library`
+            : "Your music library is currently empty.";
+
+    } catch (error) {
+
+        message.textContent = "Error connecting to music library.";
+
+        console.error(error);
+    }
+}
+
+
+// Display tracks
+function displayTracks(list) {
+
+    trackList.innerHTML = "";
+
+    list.forEach(track => {
+
+        const container = document.createElement("div");
+        container.className = "track";
+
+        const info = document.createElement("div");
+        info.className = "track-info";
+
+        const name = document.createElement("div");
+        name.className = "track-name";
+        name.textContent = track.name;
+
+        const size = document.createElement("div");
+        size.className = "track-size";
+        size.textContent = `${(track.size / 1024 / 1024).toFixed(2)} MB`;
+
+        info.appendChild(name);
+        info.appendChild(size);
+
+        const playButton = document.createElement("button");
+        playButton.textContent = "▶ Play";
+
+        playButton.addEventListener("click", () => {
+            player.src = `${API}/api/file?key=${encodeURIComponent(track.key)}`;
+            player.play();
+        });
+
+        const download = document.createElement("a");
+        download.className = "download";
+        download.textContent = "Download";
+        download.href = `${API}/api/file?key=${encodeURIComponent(track.key)}&download=1`;
+        download.target = "_blank";
+        download.rel = "noopener";
+
+        container.appendChild(info);
+        container.appendChild(playButton);
+        container.appendChild(download);
+
+        trackList.appendChild(container);
+
+    });
+
+}
+
+
+// Search tracks
+search.addEventListener("input", () => {
+
+    const query = search.value.toLowerCase();
+
+    const filtered = tracks.filter(track =>
+        track.name.toLowerCase().includes(query)
+    );
+
+    displayTracks(filtered);
+
+});
+
+
+// Upload a track
+document.getElementById("upload-button").addEventListener("click", async () => {
+
+    const fileInput = document.getElementById("file-input");
+    const status = document.getElementById("upload-status");
+
+    const file = fileInput.files[0];
+
+    if (!file) {
+        status.textContent = "Please select an MP3 file.";
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".mp3")) {
+        status.textContent = "Only MP3 files are supported.";
+        return;
+    }
+
+    if (file.size > 90 * 1024 * 1024) {
+        status.textContent = "Files must be smaller than 90 MB.";
+        return;
+    }
+
+    let password = sessionStorage.getItem("uploadPassword");
+
+    if (!password) {
+        password = prompt("Enter the upload password:");
+
+        if (!password) {
+            return;
+        }
+
+        sessionStorage.setItem("uploadPassword", password);
+    }
+
+    status.textContent = "Uploading...";
+
+    try {
+
+        const response = await fetch(
+            `${API}/api/upload?filename=${encodeURIComponent(file.name)}`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${password}`
+                },
+                body: file
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+            if (response.status === 401) {
+                sessionStorage.removeItem("uploadPassword");
+            }
+
+            throw new Error(result.error || "Upload failed");
+
+        }
+
+        status.textContent = "Upload successful!";
+
+        fileInput.value = "";
+
+        await loadTracks();
+
+    } catch (error) {
+
+        status.textContent = error.message;
+
+    }
+
+});
+
+
+// Start website
+loadTracks();
+
+</script>
+
+</body>
 </html>
